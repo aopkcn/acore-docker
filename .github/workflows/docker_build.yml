@@ -51,9 +51,9 @@ jobs:
           else
             echo "提交 ID 不相同，更新文件并推送"
             NEW_COMMIT_ID="$CORE_COMMIT_ID"
-            
+            FILE_CONTENT="Version.txt"
             # 获取文件的 SHA 值
-            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/Version.txt"
+            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/$FILE_CONTENT"
             FILE_CONTENT=$(echo -n "$NEW_COMMIT_ID" | base64)  # 进行 base64 编码
             
             # 获取文件的 SHA 值，如果文件不存在则返回空
