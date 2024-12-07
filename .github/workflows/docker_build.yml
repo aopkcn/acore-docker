@@ -9,7 +9,7 @@ jobs:
     name: 检查版本
     runs-on: ubuntu-20.04
     outputs:
-      skip_build: ${{ steps.check.outputs.skip_build }}
+      skip_build: ${{ steps.get_commit_id.outputs.skip_build }}
     steps:
       - name: 获取指定项目的提交 ID
         id: get_commit_id
