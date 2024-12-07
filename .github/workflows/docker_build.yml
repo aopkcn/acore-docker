@@ -15,25 +15,25 @@ jobs:
     name: 构建发布
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取核心代码
-        uses: actions/checkout@v4
-        with:
-          repository: 'liyunfan1223/azerothcore-wotlk'
-          ref: 'Playerbot'
-
-      - name: 获取并比对提交 ID
-        id: get_and_compare_commit_id
+      - name: 获取指定项目的提交 ID
+        id: get_commit_id
         run: |
-          # 获取核心代码的最新提交 ID
-          CORE_COMMIT_ID=$(git rev-parse HEAD)
-          # 去除前后空格和换行符
-          CORE_COMMIT_ID=$(echo $CORE_COMMIT_ID | tr -d '[:space:]')
-          echo "当前拉取的核心代码最新提交 ID: $CORE_COMMIT_ID"
+          # 获取指定项目的提交 ID，使用 GitHub API
+          REPO="liyunfan1223/azerothcore-wotlk"
+          BRANCH="master"  # 或者其他你想指定的分支
+          # 使用 GitHub API 获取最新提交的 SHA ID
+          CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/$REPO/commits/$BRANCH | jq -r '.sha')
           
-          # 从网络地址获取当前项目中的提交 ID
+          if [ -z "$CORE_COMMIT_ID" ]; then
+            echo "无法获取指定项目的提交 ID"
+            exit 1
+          else
+            echo "指定项目的提交 ID: $CORE_COMMIT_ID"
+          fi
+
+          # 获取当前项目中的提交 ID
           FILE_URL="https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt"  # 文件的网络地址
           CURRENT_COMMIT_ID=$(curl -s $FILE_URL)
-          # 去除前后空格和换行符
           CURRENT_COMMIT_ID=$(echo $CURRENT_COMMIT_ID | tr -d '[:space:]')
           
           if [ -z "$CURRENT_COMMIT_ID" ]; then
@@ -42,26 +42,55 @@ jobs:
           else
             echo "当前项目中的提交 ID: $CURRENT_COMMIT_ID"
           fi
-          
+
           # 比对提交 ID，如果相同则停止工作流
           echo "比对核心代码提交 ID: '$CORE_COMMIT_ID' 与 当前项目提交 ID: '$CURRENT_COMMIT_ID'"
           if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
             echo "核心代码的提交 ID 与当前项目的提交 ID 相同，停止工作流"
-            echo "skip_build=true" >> $GITHUB_ENV  # 设置一个环境变量来指示跳过后续步骤
             exit 0  # 提交 ID 相同，停止工作流
           else
-            echo "提交 ID 不相同，继续后续步骤"
+            echo "提交 ID 不相同，更新文件并推送"
+            NEW_COMMIT_ID="$CORE_COMMIT_ID"
+            
+            # 获取文件的 SHA 值
+            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/Version.txt"
+            FILE_CONTENT=$(echo -n "$NEW_COMMIT_ID" | base64)  # 进行 base64 编码
+            
+            # 获取文件的 SHA 值，如果文件不存在则返回空
+            FILE_SHA=$(curl -s -H "Authorization: token ${{ secrets.TOKEN }}" \
+                         -H "Accept: application/vnd.github.v3+json" \
+                         $API_URL | jq -r '.sha')
+
+            if [ "$FILE_SHA" != "null" ]; then
+              # 如果文件存在，则使用 PUT 更新
+              curl -X PUT $API_URL \
+                -H "Authorization: token ${{ secrets.TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -d '{
+                  "message": "更新提交 ID 为 '"$NEW_COMMIT_ID"'",
+                  "content": "'"$FILE_CONTENT"'",
+                  "sha": "'"$FILE_SHA"'"
+                }'
+            else
+              # 如果文件不存在，使用 POST 创建文件
+              curl -X POST $API_URL \
+                -H "Authorization: token ${{ secrets.TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -d '{
+                  "message": "创建 Version.txt 文件并写入提交 ID",
+                  "content": "'"$FILE_CONTENT"'"
+                }'
+            fi
+            echo "文件更新成功，推送更改"
           fi
 
       - name: 拉取当前项目
-        if: env.skip_build != 'true'  
         uses: actions/checkout@v4
         with:
           ref: 'master'
           path: 'build'
 
       - name: 拉取Eluna代码
-        if: env.skip_build != 'true'  
         uses: actions/checkout@v4
         with:
           repository: 'azerothcore/mod-eluna'  
@@ -69,7 +98,6 @@ jobs:
           path: 'modules/mod-eluna'
 
       - name: 拉取playerbots代码
-        if: env.skip_build != 'true'  
         uses: actions/checkout@v4
         with:
           repository: 'liyunfan1223/mod-playerbots'  
@@ -77,25 +105,21 @@ jobs:
           path: 'modules/mod-playerbots'
 
       - name: 登录 Docker Hub # 登录 Docker Hub
-        if: env.skip_build != 'true'  
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }} # 使用 GitHub Secrets 提供的用户名
           password: ${{ secrets.DOCKERHUB_TOKEN }} # 使用 GitHub Secrets 提供的令牌
 
       - name: Get version # 获取版本号
-        if: env.skip_build != 'true'  
         id: version # 给此步骤定义一个 ID 以供后续使用
         run: |
           version="$(jq -r '.version' acore.json)"
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: 设置 Docker Buildx 环境
-        if: env.skip_build != 'true'  
         uses: docker/setup-buildx-action@v3
 
       - name: build worldserver # 构建 worldserver Docker 镜像
-        if: env.skip_build != 'true'  
         uses: ./build/.github/docker-build # 使用自定义 Action
         with:
           component-name: worldserver # 指定组件名称
@@ -103,7 +127,6 @@ jobs:
           push: true # 如果在主分支运行，则推送镜像
 
       - name: build authserver # 构建 authserver Docker 镜像
-        if: env.skip_build != 'true'  
         uses: ./build/.github/docker-build
         with:
           component-name: authserver
@@ -111,7 +134,6 @@ jobs:
           push: true
 
       - name: build db-import # 构建 db-import Docker 镜像
-        if: env.skip_build != 'true'  
         uses: ./build/.github/docker-build
         with:
           component-name: db-import
@@ -119,7 +141,6 @@ jobs:
           push: true
 
       - name: build client-data # 构建 client-data Docker 镜像
-        if: env.skip_build != 'true'  
         uses: ./build/.github/docker-build
         with:
           component-name: client-data
@@ -127,7 +148,6 @@ jobs:
           push: true
 
       - name: build tools # 构建 tools Docker 镜像
-        if: env.skip_build != 'true'  
         uses: ./build/.github/docker-build
         with:
           component-name: tools
@@ -135,7 +155,6 @@ jobs:
           push: true
 
       - name: build dev-server # 构建 dev-server Docker 镜像（使用自定义 Dockerfile）
-        if: env.skip_build != 'true'  
         uses: ./build/.github/docker-build
         with:
           component-name: dev
