@@ -17,7 +17,6 @@ jobs:
         with:
           repository: 'liyunfan1223/azerothcore-wotlk'
           ref: 'Playerbot'
-          path: ''
 
       - name: 拉取当前项目
         uses: actions/checkout@v4
@@ -39,7 +38,10 @@ jobs:
         run: |
             echo "列出当前工作区的文件结构:"
             find $(pwd) -type f
-
+      - name: 列出所有文件夹
+        run: |
+            echo "列出当前工作区的文件结构:"
+            find . -type d
       - name: 登录 Docker Hub # 登录 Docker Hub
         uses: docker/login-action@v1
         with:
@@ -49,7 +51,7 @@ jobs:
       - name: Get version # 获取版本号
         id: version # 给此步骤定义一个 ID 以供后续使用
         run: |
-          version="$(jq -r '.version' ./acore.json)"
+          version="$(jq -r '.version' acore.json)"
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: 设置 Docker Buildx 环境
