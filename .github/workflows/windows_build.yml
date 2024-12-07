@@ -54,7 +54,7 @@ jobs:
     name: 构建发布
     needs: [build-ubuntu]
     runs-on: windows-latest
-    if: needs.build-ubuntu.outputs.skip_build != 'true'
+    # if: needs.build-ubuntu.outputs.skip_build != 'true'
     env:
       BOOST_ROOT: C:\local\boost_1_82_0
     steps:
