@@ -19,14 +19,17 @@ jobs:
         with:
           repository: 'liyunfan1223/azerothcore-wotlk'
           ref: 'Playerbot' 
+          path: 'azerothcore-wotlk'
 
       - name: 拉取Eluna代码
         uses: actions/checkout@v4
         with:
           repository: 'azerothcore/mod-eluna'  
-          ref: 'master'  
+          ref: 'master'
+          path: 'azerothcore-wotlk/modules/mod-eluna'
       - name: 列出所有文件
         run: |
+            df
             echo "列出当前工作区的文件结构:"
             ls -R
 
