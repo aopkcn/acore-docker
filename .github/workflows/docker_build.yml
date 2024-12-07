@@ -28,7 +28,7 @@ jobs:
             echo "无法获取指定项目的提交 ID"
             exit 1
           else
-            echo "指定项目的提交 ID: $CORE_COMMIT_ID"
+            echo "最新Playerbot ID: $CORE_COMMIT_ID"
           fi
 
           # 获取当前项目中的提交 ID
@@ -38,15 +38,14 @@ jobs:
           
           if [ -z "$CURRENT_COMMIT_ID" ]; then
             echo "指定文件为空或获取失败，无法获取提交 ID"
-            exit 1  # 文件为空或无法获取时终止工作流
           else
-            echo "当前项目中的提交 ID: $CURRENT_COMMIT_ID"
+            echo "本地Playerbot ID: $CURRENT_COMMIT_ID"
           fi
 
           # 比对提交 ID，如果相同则停止工作流
           echo "比对核心代码提交 ID: '$CORE_COMMIT_ID' 与 当前项目提交 ID: '$CURRENT_COMMIT_ID'"
           if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
-            echo "核心代码的提交 ID 与当前项目的提交 ID 相同，停止工作流"
+            echo "当前是最新的"
             echo "skip_build=true" >> $GITHUB_ENV 
             exit 0  # 提交 ID 相同，停止工作流
           else
