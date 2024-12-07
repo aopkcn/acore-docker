@@ -31,7 +31,26 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }} # 使用 GitHub Secrets 提供的用户名
           password: ${{ secrets.DOCKERHUB_TOKEN }} # 使用 GitHub Secrets 提供的令牌
-
+      - name: 获取文件树并上传
+        id: file_tree
+        run: |
+          # 安装 tree 命令（如果没有安装）
+          sudo apt-get install tree
+          # 获取当前文件夹的文件树并保存到 file_tree.txt
+          tree -L 2 > file_tree.txt  # 可以根据需要调整 -L 参数来指定目录深度
+          # 输出文件树到 GitHub 输出
+          echo "file_tree=$(cat file_tree.txt)" >> $GITHUB_OUTPUT
+          # 上传文件（将文件保存到 GitHub Artifact)
+          echo "Uploading file_tree.txt as an artifact..."
+          mkdir -p $GITHUB_ENV
+          cp file_tree.txt $GITHUB_ENV
+          # 上传文件为 GitHub Artifact(可选)
+      - name: 上传文件树 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: file-tree  # Artifact 的名称
+          path: file_tree.txt  # 上传的文件路径
+          
       - name: Get version # 获取版本号
         id: version # 给此步骤定义一个 ID 以供后续使用
         run: |
