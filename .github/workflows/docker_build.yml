@@ -53,7 +53,7 @@ jobs:
             
             # 使用 GitHub API 更新文件
             FILE_CONTENT=$(echo "$NEW_COMMIT_ID" | base64)
-            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/$FILE_PATH"
+            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/Version.txt"
             
             curl -X PUT $API_URL \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
