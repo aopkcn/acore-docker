@@ -81,6 +81,12 @@ jobs:
     needs: [build-ubuntu]
     runs-on: ubuntu-latest
     steps:
+      - name: 拉取核心代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'liyunfan1223/azerothcore-wotlk'
+          ref: 'Playerbot'
+
       - name: 拉取当前项目
         if: env.skip_build != 'true'  
         uses: actions/checkout@v4
