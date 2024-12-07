@@ -75,7 +75,7 @@ jobs:
   publish:
     name: 构建发布
     needs: [build-ubuntu]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: needs.build-ubuntu.outputs.skip_build != 'true'
     strategy:
       matrix:
