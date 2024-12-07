@@ -1,0 +1,86 @@
+name: 构建和发布容器镜像
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-ubuntu:
+    name: 构建(ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取当前项目
+        uses: actions/checkout@v4
+
+      - name: 拉取核心代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'liyunfan1223/azerothcore-wotlk'
+          ref: 'Playerbot' 
+
+      - name: 拉取Eluna代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'azerothcore/mod-eluna'  
+          ref: 'master'  
+
+      - name: 登录 Docker Hub # 登录 Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # 使用 GitHub Secrets 提供的用户名
+          password: ${{ secrets.DOCKERHUB_TOKEN }} # 使用 GitHub Secrets 提供的令牌
+
+      - name: Get version # 获取版本号
+        id: version # 给此步骤定义一个 ID 以供后续使用
+        run: |
+          version="$(jq -r '.version' acore.json)"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: 设置 Docker Buildx 环境
+        uses: docker/setup-buildx-action@v3
+
+      - name: build worldserver # 构建 worldserver Docker 镜像
+        uses: ./.github/actions/docker-tag-and-build # 使用自定义 Action
+        with:
+          component-name: worldserver # 指定组件名称
+          version: ${{ steps.version.outputs.version }} # 使用之前提取的版本号
+          push: true # 如果在主分支运行，则推送镜像
+
+      - name: build authserver # 构建 authserver Docker 镜像
+        uses: ./.github/actions/docker-tag-and-build
+        with:
+          component-name: authserver
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: build db-import # 构建 db-import Docker 镜像
+        uses: ./.github/actions/docker-tag-and-build
+        with:
+          component-name: db-import
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: build client-data # 构建 client-data Docker 镜像
+        uses: ./.github/actions/docker-tag-and-build
+        with:
+          component-name: client-data
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: build tools # 构建 tools Docker 镜像
+        uses: ./.github/actions/docker-tag-and-build
+        with:
+          component-name: tools
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: build dev-server # 构建 dev-server Docker 镜像（使用自定义 Dockerfile）
+        uses: ./.github/actions/docker-tag-and-build
+        with:
+          component-name: dev-server
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+
