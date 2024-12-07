@@ -50,6 +50,7 @@ jobs:
             exit 0  # 提交 ID 相同，停止工作流
           else
             echo "提交 ID 不相同，更新文件并推送"
+            echo "skip_build=false" >> $GITHUB_ENV 
             NEW_COMMIT_ID="$CORE_COMMIT_ID"
             FILE_CONTENT="Version.txt"
             # 获取文件的 SHA 值
