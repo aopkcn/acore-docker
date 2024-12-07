@@ -19,7 +19,6 @@ jobs:
         id: get_commit_id
         run: |
           # 获取指定项目的提交 ID，使用 GitHub API
-          echo "version=bot" >> $GITHUB_OUTPUT
           REPO="liyunfan1223/azerothcore-wotlk"
           BRANCH="Playerbot"  # 或者其他你想指定的分支
           # 使用 GitHub API 获取最新提交的 SHA ID
@@ -76,11 +75,14 @@ jobs:
             fi
             echo "文件更新成功，推送更改"
           fi
-
   publish:
     name: 构建发布
-    needs: [build-ubuntu]
-    runs-on: ubuntu-latest
+    needs: build-ubuntu
+    runs-on: ubuntu-20.04
+    if: env.skip_build != 'true'
+    strategy:
+      matrix:
+        component: [worldserver, authserver, db-import, client-data, tools, dev-server]
     steps:
       - name: 拉取核心代码
         uses: actions/checkout@v4
@@ -117,6 +119,66 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }} 
           password: ${{ secrets.DOCKERHUB_TOKEN }} 
+      - name: 设置构建版本
+        id: version
+        run: |
+          version="bot"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: 设置 Docker Buildx 环境
+        if: env.skip_build != 'true' 
+        uses: docker/setup-buildx-action@v3
+
+      - name: 构建与推送镜像
+        uses: ./build/.github/docker-build
+        with:
+          component-name: ${{ matrix.component }}
+          version: ${{ steps.version.outputs.version }}
+          push: true
+          dockerfile: ${{ matrix.component == 'dev-server' && 'apps/docker/Dockerfile.dev-server' || '' }}
+
+
+
+  # publish:
+  #   name: 构建发布
+  #   needs: [build-ubuntu]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: 拉取核心代码
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: 'liyunfan1223/azerothcore-wotlk'
+  #         ref: 'Playerbot'
+
+  #     - name: 拉取当前项目
+  #       if: env.skip_build != 'true'  
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: 'master'
+  #         path: 'build'
+
+  #     - name: 拉取Eluna代码
+  #       if: env.skip_build != 'true' 
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: 'azerothcore/mod-eluna'  
+  #         ref: 'master'
+  #         path: 'modules/mod-eluna'
+
+  #     - name: 拉取playerbots代码
+  #       if: env.skip_build != 'true' 
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: 'liyunfan1223/mod-playerbots'  
+  #         ref: 'master'
+  #         path: 'modules/mod-playerbots'
+
+  #     - name: 登录 Docker Hub 
+  #       if: env.skip_build != 'true' 
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }} 
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }} 
 
       # - name: 登录 GitHub Container Registry
       #   if: env.skip_build != 'true'
@@ -134,63 +196,63 @@ jobs:
       #     username: ${{ secrets.ALIYUN_USERNAME }}
       #     password: ${{ secrets.ALIYUN_PASSWORD }}
 
-      - name: 设置构建版本
-        id: version
-        run: |
-          version="bot"
-          echo "version=$version" >> $GITHUB_OUTPUT
+      # - name: 设置构建版本
+      #   id: version
+      #   run: |
+      #     version="bot"
+      #     echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: 设置 Docker Buildx 环境
-        if: env.skip_build != 'true' 
-        uses: docker/setup-buildx-action@v3
+      # - name: 设置 Docker Buildx 环境
+      #   if: env.skip_build != 'true' 
+      #   uses: docker/setup-buildx-action@v3
 
-      - name: 构建 worldserver 
-        if: env.skip_build != 'true' 
-        uses: ./build/.github/docker-build 
-        with:
-          component-name: worldserver 
-          version: ${{ steps.version.outputs.version }} 
-          push: true 
+      # - name: 构建 worldserver 
+      #   if: env.skip_build != 'true' 
+      #   uses: ./build/.github/docker-build 
+      #   with:
+      #     component-name: worldserver 
+      #     version: ${{ steps.version.outputs.version }} 
+      #     push: true 
 
-      - name: 构建 authserver 
-        if: env.skip_build != 'true' 
-        uses: ./build/.github/docker-build
-        with:
-          component-name: authserver
-          version: ${{ steps.version.outputs.version }}
-          push: true
+      # - name: 构建 authserver 
+      #   if: env.skip_build != 'true' 
+      #   uses: ./build/.github/docker-build
+      #   with:
+      #     component-name: authserver
+      #     version: ${{ steps.version.outputs.version }}
+      #     push: true
 
-      - name: 构建 db-import 
-        if: env.skip_build != 'true' 
-        uses: ./build/.github/docker-build
-        with:
-          component-name: db-import
-          version: ${{ steps.version.outputs.version }}
-          push: true
+      # - name: 构建 db-import 
+      #   if: env.skip_build != 'true' 
+      #   uses: ./build/.github/docker-build
+      #   with:
+      #     component-name: db-import
+      #     version: ${{ steps.version.outputs.version }}
+      #     push: true
 
-      - name: 构建 client-data
-        if: env.skip_build != 'true' 
-        uses: ./build/.github/docker-build
-        with:
-          component-name: client-data
-          version: ${{ steps.version.outputs.version }}
-          push: true
+      # - name: 构建 client-data
+      #   if: env.skip_build != 'true' 
+      #   uses: ./build/.github/docker-build
+      #   with:
+      #     component-name: client-data
+      #     version: ${{ steps.version.outputs.version }}
+      #     push: true
 
-      - name: 构建 tools
-        if: env.skip_build != 'true' 
-        uses: ./build/.github/docker-build
-        with:
-          component-name: tools
-          version: ${{ steps.version.outputs.version }}
-          push: true
+      # - name: 构建 tools
+      #   if: env.skip_build != 'true' 
+      #   uses: ./build/.github/docker-build
+      #   with:
+      #     component-name: tools
+      #     version: ${{ steps.version.outputs.version }}
+      #     push: true
 
-      - name: 构建 dev-server
-        if: env.skip_build != 'true' 
-        uses: ./build/.github/docker-build
-        with:
-          component-name: dev
-          version: ${{ steps.version.outputs.version }}
-          push: true
-          dockerfile: apps/docker/Dockerfile.dev-server
+      # - name: 构建 dev-server
+      #   if: env.skip_build != 'true' 
+      #   uses: ./build/.github/docker-build
+      #   with:
+      #     component-name: dev
+      #     version: ${{ steps.version.outputs.version }}
+      #     push: true
+      #     dockerfile: apps/docker/Dockerfile.dev-server
 
           
