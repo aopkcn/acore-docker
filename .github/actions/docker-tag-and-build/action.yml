@@ -16,7 +16,7 @@ inputs:
   dockerfile:
     description: 要使用的 Dockerfile
     required: false
-    default: ./azerothcore-wotlk/apps/docker/Dockerfile
+    default: apps/docker/Dockerfile
 runs:
   using: composite
   steps:
