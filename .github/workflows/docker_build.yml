@@ -45,7 +45,7 @@ jobs:
       - name: Get version # 获取版本号
         id: version # 给此步骤定义一个 ID 以供后续使用
         run: |
-          version="$(jq -r '.version' azerothcore-wotlk/acore.json)"
+          version="$(jq -r '.version' acore.json)"
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: 设置 Docker Buildx 环境
