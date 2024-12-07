@@ -17,31 +17,14 @@ inputs:
     description: 要使用的 Dockerfile
     required: false
     default: apps/docker/Dockerfile
-  registries:
-    description: 用逗号分隔的目标 Docker 注册表列表（例如：docker.io,ghcr.io）
-    required: true
-    type: string
-
 runs:
   using: composite
   steps:
-    - name: 解析注册表并生成镜像列表
-      id: generate-images
-      shell: bash
-      run: |
-        registries=(${{ inputs.registries }})
-        component="${{ inputs.component-name }}"
-        images=()
-        for registry in "${registries[@]}"; do
-          images+=("${registry}/${component}")
-        done
-        echo "images=$(IFS=,; echo "${images[*]}")" >> $GITHUB_ENV
-
     - name: 获取 Docker 元数据
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.images }}/ac-wotlk-${{ inputs.component-name }}
+        images: aopkcn/ac-wotlk-${{ inputs.component-name }}
         tags: |
           type=raw,value=${{ inputs.version }}
           type=ref,event=branch
