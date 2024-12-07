@@ -3,6 +3,8 @@ name: 艾泽拉斯+机器人构建Docker发布
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - 'Version.txt'
 
 jobs:
   build-ubuntu:
@@ -36,34 +38,27 @@ jobs:
 
           if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
             echo "当前是最新的"
-             echo "skip_build=true" >> $GITHUB_OUTPUT
+            echo "skip_build=true" >> $GITHUB_OUTPUT
             exit 0  # 提交 ID 相同，停止工作流
           else
             echo "提交 ID 不相同，更新文件并推送"
-            echo "skip_build=false" >> $GITHUB_OUTPUT 
+            echo "skip_build=false" >> $GITHUB_OUTPUT
             NEW_COMMIT_ID="$CORE_COMMIT_ID"
             # 获取文件的 SHA 值
             API_URL="https://api.github.com/repos/${{ github.repository }}/contents/Version.txt"
             FILE_CONTENT=$(echo -n "$NEW_COMMIT_ID" | base64)  # 进行 base64 编码
-            
-            # 获取文件的 SHA 值，如果文件不存在则返回空
-            FILE_SHA=$(curl -s -H "Authorization: token ${{ secrets.TOKEN }}" \
-                         -H "Accept: application/vnd.github.v3+json" \
-                         $API_URL | jq -r '.sha')
 
-            if [ "$FILE_SHA" != "null" ]; then
-              # 如果文件存在，则使用 PUT 更新
-              curl -X PUT $API_URL \
-                -H "Authorization: token ${{ secrets.TOKEN }}" \
-                -H "Accept: application/vnd.github.v3+json" \
-                -d '{
-                  "message": "更新提交 ID 为 '"$NEW_COMMIT_ID"'",
-                  "content": "'"$FILE_CONTENT"'",
-                  "sha": "'"$FILE_SHA"'"
-                }'
-            fi
+            # 直接使用 PUT 请求更新文件
+            curl -X PUT $API_URL \
+              -H "Authorization: token ${{ secrets.TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -d '{
+                "message": "更新提交 ID 为 '"$NEW_COMMIT_ID"'",
+                "content": "'"$FILE_CONTENT"'"
+              }'
             echo "文件更新成功，推送更改"
           fi
+
 
 
   publish:
