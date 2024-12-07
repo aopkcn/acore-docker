@@ -43,10 +43,10 @@ jobs:
       # 比对提交 ID，如果不同则更新文件并推送
       - name: 比对提交 ID
         run: |
-          if [ "${{ steps.get_commit_id.outputs.core_commit_id }}" == "$CURRENT_COMMIT_ID" ]; then
+            if [ "${{ steps.get_commit_id.outputs.core_commit_id }}" == "$CURRENT_COMMIT_ID" ]; then
             echo "核心代码的提交 ID 与当前项目的提交 ID 相同，停止工作流"
             exit 0  # 提交 ID 相同，停止工作流
-          else
+            else
             echo "提交 ID 不相同，更新文件并推送"
             # 将核心代码的提交 ID 写入文件
             echo "${{ steps.get_commit_id.outputs.core_commit_id }}" > "$FILE_PATH"
@@ -56,7 +56,7 @@ jobs:
             git add "$FILE_PATH"
             git commit -m "更新提交 ID 为 ${{ steps.get_commit_id.outputs.core_commit_id }}"
             git push
-          fi
+            fi
       - name: 拉取Eluna代码
         uses: actions/checkout@v4
         with:
