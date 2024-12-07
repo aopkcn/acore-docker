@@ -12,8 +12,8 @@ concurrency:
 
 jobs:
   build-ubuntu:
-    name: 构建发布
-    runs-on: ubuntu-latest
+    name: 检查版本
+    runs-on: ubuntu-20.04
     steps:
       - name: 获取指定项目的提交 ID
         id: get_commit_id
@@ -76,6 +76,11 @@ jobs:
             echo "文件更新成功，推送更改"
           fi
 
+  publish:
+    name: 构建发布
+    needs: [build-ubuntu]
+    runs-on: ubuntu-latest
+    steps:
       - name: 拉取当前项目
         if: env.skip_build != 'true'  
         uses: actions/checkout@v4
