@@ -16,6 +16,7 @@ jobs:
         with:
           repository: 'liyunfan1223/azerothcore-wotlk'
           ref: 'Playerbot'
+
       - name: 获取并比对提交 ID
         id: get_and_compare_commit_id
         run: |
