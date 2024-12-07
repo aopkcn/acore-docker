@@ -30,15 +30,16 @@ jobs:
           ref: 'master'
           path: 'build'
 
-      - name: 获取当前项目中的指定文件的提交 ID
+      # 从网络地址获取当前项目中的提交 ID
+      - name: 获取当前项目中的提交 ID
         run: |
-          FILE_PATH="./build/Version.txt"  # 替换为你指定文件的路径
-          if [ -f "$FILE_PATH" ]; then
-            CURRENT_COMMIT_ID=$(cat "$FILE_PATH")
-            echo "当前项目中的提交 ID: $CURRENT_COMMIT_ID"
+          FILE_URL="https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt"  # 文件的网络地址
+          CURRENT_COMMIT_ID=$(curl -s $FILE_URL)
+          if [ -z "$CURRENT_COMMIT_ID" ]; then
+            echo "指定文件为空或获取失败，无法获取提交 ID"
+            exit 1  # 文件为空或无法获取时终止工作流
           else
-            echo "指定文件不存在，无法获取提交 ID"
-            exit 1  # 文件不存在时终止工作流
+            echo "当前项目中的提交 ID: $CURRENT_COMMIT_ID"
           fi
       # 比对提交 ID，如果不同则更新文件并推送
       - name: 比对提交 ID
