@@ -3,12 +3,6 @@ name: 艾泽拉斯+机器人构建Docker发布
 on:
   push:
     branches: [master]
-  pull_request:
-    branches: [master]
-
-concurrency:
-  group: "azerothcore-build-${{ github.ref }}"
-  cancel-in-progress: true  # 如果有正在执行的工作流，则取消并替换它
 
 jobs:
   build-ubuntu:
