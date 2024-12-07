@@ -59,35 +59,35 @@ jobs:
           push: true # 如果在主分支运行，则推送镜像
 
       - name: build authserver # 构建 authserver Docker 镜像
-        uses: acore-docker/.github/actions/docker-tag-and-build
+        uses: /acore-docker/.github/actions/docker-tag-and-build
         with:
           component-name: authserver
           version: ${{ steps.version.outputs.version }}
           push: true
 
       - name: build db-import # 构建 db-import Docker 镜像
-        uses: acore-docker/.github/actions/docker-tag-and-build
+        uses: /acore-docker/.github/actions/docker-tag-and-build
         with:
           component-name: db-import
           version: ${{ steps.version.outputs.version }}
           push: true
 
       - name: build client-data # 构建 client-data Docker 镜像
-        uses: acore-docker/.github/actions/docker-tag-and-build
+        uses: /acore-docker/.github/actions/docker-tag-and-build
         with:
           component-name: client-data
           version: ${{ steps.version.outputs.version }}
           push: true
 
       - name: build tools # 构建 tools Docker 镜像
-        uses: acore-docker/.github/actions/docker-tag-and-build
+        uses: /acore-docker/.github/actions/docker-tag-and-build
         with:
           component-name: tools
           version: ${{ steps.version.outputs.version }}
           push: true
 
       - name: build dev-server # 构建 dev-server Docker 镜像（使用自定义 Dockerfile）
-        uses: acore-docker/.github/actions/docker-tag-and-build
+        uses: /acore-docker/.github/actions/docker-tag-and-build
         with:
           component-name: dev-server
           version: ${{ steps.version.outputs.version }}
