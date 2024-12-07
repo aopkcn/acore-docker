@@ -36,11 +36,11 @@ jobs:
 
           if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
             echo "当前是最新的"
-            echo "::set-output name=skip_build::true"
+             echo "skip_build=true" >> $GITHUB_OUTPUT
             exit 0  # 提交 ID 相同，停止工作流
           else
             echo "提交 ID 不相同，更新文件并推送"
-            echo "::set-output name=skip_build::false" 
+            echo "skip_build=false" >> $GITHUB_OUTPUT 
             NEW_COMMIT_ID="$CORE_COMMIT_ID"
             # 获取文件的 SHA 值
             API_URL="https://api.github.com/repos/${{ github.repository }}/contents/Version.txt"
