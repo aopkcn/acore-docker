@@ -27,6 +27,7 @@ runs:
   steps:
     - name: 解析注册表并生成镜像列表
       id: generate-images
+      shell: bash
       run: |
         registries=(${{ inputs.registries }})
         component="${{ inputs.component-name }}"
