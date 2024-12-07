@@ -3,8 +3,8 @@ name: 艾泽拉斯+机器人构建Docker发布
 on:
   push:
     branches: [master]
-    paths-ignore:
-      - 'Version.txt'
+    # paths-ignore:
+    #   - 'Version.txt'
 
 jobs:
   build-ubuntu:
