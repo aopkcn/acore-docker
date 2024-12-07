@@ -125,6 +125,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TOKEN }}
+
       - name: 登录阿里云容器镜像服务
         if: env.skip_build != 'true'
         uses: docker/login-action@v3
@@ -150,6 +151,7 @@ jobs:
           component-name: worldserver 
           version: ${{ steps.version.outputs.version }} 
           push: true 
+          registries: "registry.cn-chengdu.aliyuncs.com/${{ secrets.DOCKERHUB_USERNAME }},ghcr.io/${{ secrets.DOCKERHUB_USERNAME }},${{ secrets.DOCKERHUB_USERNAME }}"
 
       - name: 构建 authserver 
         if: env.skip_build != 'true' 
@@ -158,6 +160,7 @@ jobs:
           component-name: authserver
           version: ${{ steps.version.outputs.version }}
           push: true
+          registries: "registry.cn-chengdu.aliyuncs.com/${{ secrets.DOCKERHUB_USERNAME }},ghcr.io/${{ secrets.DOCKERHUB_USERNAME }},${{ secrets.DOCKERHUB_USERNAME }}"
 
       - name: 构建 db-import 
         if: env.skip_build != 'true' 
@@ -166,6 +169,7 @@ jobs:
           component-name: db-import
           version: ${{ steps.version.outputs.version }}
           push: true
+          registries: "registry.cn-chengdu.aliyuncs.com/${{ secrets.DOCKERHUB_USERNAME }},ghcr.io/${{ secrets.DOCKERHUB_USERNAME }},${{ secrets.DOCKERHUB_USERNAME }}"
 
       - name: 构建 client-data
         if: env.skip_build != 'true' 
@@ -174,6 +178,7 @@ jobs:
           component-name: client-data
           version: ${{ steps.version.outputs.version }}
           push: true
+          registries: "registry.cn-chengdu.aliyuncs.com/${{ secrets.DOCKERHUB_USERNAME }},ghcr.io/${{ secrets.DOCKERHUB_USERNAME }},${{ secrets.DOCKERHUB_USERNAME }}"
 
       - name: 构建 tools
         if: env.skip_build != 'true' 
@@ -182,6 +187,7 @@ jobs:
           component-name: tools
           version: ${{ steps.version.outputs.version }}
           push: true
+          registries: "registry.cn-chengdu.aliyuncs.com/${{ secrets.DOCKERHUB_USERNAME }},ghcr.io/${{ secrets.DOCKERHUB_USERNAME }},${{ secrets.DOCKERHUB_USERNAME }}"
 
       - name: 构建 dev-server
         if: env.skip_build != 'true' 
@@ -191,5 +197,6 @@ jobs:
           version: ${{ steps.version.outputs.version }}
           push: true
           dockerfile: apps/docker/Dockerfile.dev-server
+          registries: "registry.cn-chengdu.aliyuncs.com/${{ secrets.DOCKERHUB_USERNAME }},ghcr.io/${{ secrets.DOCKERHUB_USERNAME }},${{ secrets.DOCKERHUB_USERNAME }}"
 
           
