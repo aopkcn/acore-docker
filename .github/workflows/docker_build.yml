@@ -22,7 +22,7 @@ jobs:
           REPO="liyunfan1223/azerothcore-wotlk"
           BRANCH="master"  # 或者其他你想指定的分支
           # 使用 GitHub API 获取最新提交的 SHA ID
-          CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/$REPO/commits/$BRANCH | jq -r '.[0].sha')
+          CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/$REPO/commits/$BRANCH?per_page=1 | jq -r '.sha')
           
           if [ -z "$CORE_COMMIT_ID" ]; then
             echo "无法获取指定项目的提交 ID"
