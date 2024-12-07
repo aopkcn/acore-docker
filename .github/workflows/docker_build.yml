@@ -16,15 +16,47 @@ jobs:
         with:
           repository: 'liyunfan1223/azerothcore-wotlk'
           ref: 'Playerbot'
+      # 获取核心代码的最新提交 ID
       - name: 获取最新的提交 ID
+        id: get_commit_id
         run: |
-          echo "当前拉取的核心代码最新提交 ID: $(git rev-parse HEAD)"
+          CORE_COMMIT_ID=$(git rev-parse HEAD)
+          echo "当前拉取的核心代码最新提交 ID: $CORE_COMMIT_ID"
+          echo "::set-output name=core_commit_id::$CORE_COMMIT_ID"
+
       - name: 拉取当前项目
         uses: actions/checkout@v4
         with:
           ref: 'master'
           path: 'build'
 
+      - name: 获取当前项目中的指定文件的提交 ID
+        run: |
+          FILE_PATH="build/Version.txt"  # 替换为你指定文件的路径
+          if [ -f "$FILE_PATH" ]; then
+            CURRENT_COMMIT_ID=$(cat "$FILE_PATH")
+            echo "当前项目中的提交 ID: $CURRENT_COMMIT_ID"
+          else
+            echo "指定文件不存在，无法获取提交 ID"
+            exit 1  # 文件不存在时终止工作流
+          fi
+      # 比对提交 ID，如果不同则更新文件并推送
+      - name: 比对提交 ID
+        run: |
+          if [ "${{ steps.get_commit_id.outputs.core_commit_id }}" == "$CURRENT_COMMIT_ID" ]; then
+            echo "核心代码的提交 ID 与当前项目的提交 ID 相同，停止工作流"
+            exit 0  # 提交 ID 相同，停止工作流
+          else
+            echo "提交 ID 不相同，更新文件并推送"
+            # 将核心代码的提交 ID 写入文件
+            echo "${{ steps.get_commit_id.outputs.core_commit_id }}" > "$FILE_PATH"
+            # 提交更改并推送
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git add "$FILE_PATH"
+            git commit -m "更新提交 ID 为 ${{ steps.get_commit_id.outputs.core_commit_id }}"
+            git push
+          fi
       - name: 拉取Eluna代码
         uses: actions/checkout@v4
         with:
