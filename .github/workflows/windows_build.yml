@@ -97,3 +97,12 @@ jobs:
           export CTOOLS_BUILD=all
           export CTYPE=RelWithDebInfo
           ./acore.sh compiler build
+      - name: 打包构建文件
+        run: |
+            Compress-Archive -Path var\build\obj\bin\RelWithDebInfo\* -DestinationPath AzerothCore-windows.zip
+            ls
+      - name: 上传 Windows 构建文件
+        uses: actions/upload-artifact@v4
+        with:
+         name: AzerothCore-windows
+         path: AzerothCore-windows.zip

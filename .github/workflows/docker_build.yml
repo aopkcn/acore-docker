@@ -56,7 +56,7 @@ jobs:
   publish:
     name: 构建发布
     needs: [build-ubuntu]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: needs.build-ubuntu.outputs.skip_build != 'true'
     steps:
       - name: 拉取核心代码
