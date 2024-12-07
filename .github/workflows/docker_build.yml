@@ -21,6 +21,8 @@ jobs:
         id: get_commit_id
         run: |
           CORE_COMMIT_ID=$(git rev-parse HEAD)
+          # 去除前后空格和换行符
+          CORE_COMMIT_ID=$(echo $CORE_COMMIT_ID | tr -d '[:space:]')
           echo "当前拉取的核心代码最新提交 ID: $CORE_COMMIT_ID"
           echo "::set-output name=core_commit_id::$CORE_COMMIT_ID"
 
@@ -35,6 +37,8 @@ jobs:
         run: |
           FILE_URL="https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt"  # 文件的网络地址
           CURRENT_COMMIT_ID=$(curl -s $FILE_URL)
+          # 去除前后空格和换行符
+          CURRENT_COMMIT_ID=$(echo $CURRENT_COMMIT_ID | tr -d '[:space:]')
           if [ -z "$CURRENT_COMMIT_ID" ]; then
             echo "指定文件为空或获取失败，无法获取提交 ID"
             exit 1  # 文件为空或无法获取时终止工作流
@@ -44,6 +48,7 @@ jobs:
       # 比对提交 ID，如果不同则更新文件并推送
       - name: 比对提交 ID
         run: |
+          echo "比对核心代码提交 ID: '${{ steps.get_commit_id.outputs.core_commit_id }}' 与 当前项目提交 ID: '$CURRENT_COMMIT_ID'"
           if [ "${{ steps.get_commit_id.outputs.core_commit_id }}" == "$CURRENT_COMMIT_ID" ]; then
             echo "核心代码的提交 ID 与当前项目的提交 ID 相同，停止工作流"
             exit 0  # 提交 ID 相同，停止工作流
@@ -51,19 +56,36 @@ jobs:
             echo "提交 ID 不相同，更新文件并推送"
             NEW_COMMIT_ID="${{ steps.get_commit_id.outputs.core_commit_id }}"
             
-            # 使用 GitHub API 更新文件
-            FILE_CONTENT=$(echo "$NEW_COMMIT_ID" | base64)
+            # 获取文件的 SHA 值
             API_URL="https://api.github.com/repos/${{ github.repository }}/contents/Version.txt"
+            FILE_CONTENT=$(echo -n "$NEW_COMMIT_ID" | base64)  # 进行 base64 编码
             
-            curl -X PUT $API_URL \
-              -H "Authorization: token ${{ secrets.TOKEN }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              -d '{
-                "message": "更新提交 ID 为 '"$NEW_COMMIT_ID"'",
-                "content": "'"$FILE_CONTENT"'",
-                "sha": "'$(curl -s -H "Authorization: token ${{ secrets.TOKEN }}" -H "Accept: application/vnd.github.v3+json" $API_URL | jq -r .sha)'"
-              }'
+            # 获取文件的 SHA 值，如果文件不存在则返回空
+            FILE_SHA=$(curl -s -H "Authorization: token ${{ secrets.TOKEN }}" \
+                         -H "Accept: application/vnd.github.v3+json" \
+                         $API_URL | jq -r '.sha')
 
+            if [ "$FILE_SHA" != "null" ]; then
+              # 如果文件存在，则使用 PUT 更新
+              curl -X PUT $API_URL \
+                -H "Authorization: token ${{ secrets.TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -d '{
+                  "message": "更新提交 ID 为 '"$NEW_COMMIT_ID"'",
+                  "content": "'"$FILE_CONTENT"'",
+                  "sha": "'"$FILE_SHA"'"
+                }'
+            else
+              # 如果文件不存在，使用 POST 创建文件
+              curl -X POST $API_URL \
+                -H "Authorization: token ${{ secrets.TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -d '{
+                  "message": "创建 Version.txt 文件并写入提交 ID",
+                  "content": "'"$FILE_CONTENT"'"
+                }'
+            fi
+            
             echo "文件更新成功，推送更改"
           fi
 
