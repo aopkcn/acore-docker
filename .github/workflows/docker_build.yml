@@ -75,11 +75,14 @@ jobs:
             fi
             echo "文件更新成功，推送更改"
           fi
+
+
   publish:
     name: 构建发布
-    needs: build-ubuntu
-    runs-on: ubuntu-20.04
+    needs: [build-ubuntu]
     if: env.skip_build != 'true'
+    runs-on: ubuntu-20.04
+    
     strategy:
       matrix:
         component: [worldserver, authserver, db-import, client-data, tools, dev-server]
