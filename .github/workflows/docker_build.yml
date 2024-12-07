@@ -29,13 +29,18 @@ jobs:
           repository: 'azerothcore/mod-eluna'  
           ref: 'master'
           path: 'azerothcore-wotlk/modules/mod-eluna'
+
       - name: 拉取playerbots代码
         uses: actions/checkout@v4
         with:
           repository: 'liyunfan1223/mod-playerbots'  
           ref: 'master'
           path: 'azerothcore-wotlk/modules/mod-playerbots'
- 
+      - name: 列出所有文件
+        run: |
+            echo "列出当前工作区的文件结构:"
+            find $(pwd) -type f
+
       - name: 登录 Docker Hub # 登录 Docker Hub
         uses: docker/login-action@v1
         with:
