@@ -17,7 +17,7 @@ jobs:
         with:
           repository: 'liyunfan1223/azerothcore-wotlk'
           ref: 'Playerbot'
-          path: '/'
+          path: ''
 
       - name: 拉取当前项目
         uses: actions/checkout@v4
