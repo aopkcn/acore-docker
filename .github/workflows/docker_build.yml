@@ -16,45 +16,36 @@ jobs:
         with:
           repository: 'liyunfan1223/azerothcore-wotlk'
           ref: 'Playerbot'
-      # 获取核心代码的最新提交 ID
-      - name: 获取最新的提交 ID
-        id: get_commit_id
+      - name: 获取并比对提交 ID
+        id: get_and_compare_commit_id
         run: |
+          # 获取核心代码的最新提交 ID
           CORE_COMMIT_ID=$(git rev-parse HEAD)
           # 去除前后空格和换行符
           CORE_COMMIT_ID=$(echo $CORE_COMMIT_ID | tr -d '[:space:]')
           echo "当前拉取的核心代码最新提交 ID: $CORE_COMMIT_ID"
-          echo "::set-output name=core_commit_id::$CORE_COMMIT_ID"
-
-      - name: 拉取当前项目
-        uses: actions/checkout@v4
-        with:
-          ref: 'master'
-          path: 'build'
-
-      # 从网络地址获取当前项目中的提交 ID
-      - name: 获取当前项目中的提交 ID
-        run: |
+          
+          # 从网络地址获取当前项目中的提交 ID
           FILE_URL="https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt"  # 文件的网络地址
           CURRENT_COMMIT_ID=$(curl -s $FILE_URL)
           # 去除前后空格和换行符
           CURRENT_COMMIT_ID=$(echo $CURRENT_COMMIT_ID | tr -d '[:space:]')
+          
           if [ -z "$CURRENT_COMMIT_ID" ]; then
             echo "指定文件为空或获取失败，无法获取提交 ID"
             exit 1  # 文件为空或无法获取时终止工作流
           else
             echo "当前项目中的提交 ID: $CURRENT_COMMIT_ID"
           fi
-      # 比对提交 ID，如果不同则更新文件并推送
-      - name: 比对提交 ID
-        run: |
-          echo "比对核心代码提交 ID: '${{ steps.get_commit_id.outputs.core_commit_id }}' 与 当前项目提交 ID: '$CURRENT_COMMIT_ID'"
-          if [ "${{ steps.get_commit_id.outputs.core_commit_id }}" == "$CURRENT_COMMIT_ID" ]; then
+          
+          # 比对提交 ID，如果相同则停止工作流
+          echo "比对核心代码提交 ID: '$CORE_COMMIT_ID' 与 当前项目提交 ID: '$CURRENT_COMMIT_ID'"
+          if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
             echo "核心代码的提交 ID 与当前项目的提交 ID 相同，停止工作流"
             exit 0  # 提交 ID 相同，停止工作流
           else
             echo "提交 ID 不相同，更新文件并推送"
-            NEW_COMMIT_ID="${{ steps.get_commit_id.outputs.core_commit_id }}"
+            NEW_COMMIT_ID="$CORE_COMMIT_ID"
             
             # 获取文件的 SHA 值
             API_URL="https://api.github.com/repos/${{ github.repository }}/contents/Version.txt"
@@ -85,9 +76,14 @@ jobs:
                   "content": "'"$FILE_CONTENT"'"
                 }'
             fi
-            
             echo "文件更新成功，推送更改"
           fi
+
+      - name: 拉取当前项目
+        uses: actions/checkout@v4
+        with:
+          ref: 'master'
+          path: 'build'
 
       - name: 拉取Eluna代码
         uses: actions/checkout@v4
