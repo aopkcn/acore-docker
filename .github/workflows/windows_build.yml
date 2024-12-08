@@ -83,6 +83,13 @@ jobs:
           repository: 'liyunfan1223/mod-playerbots'  
           ref: 'master'
           path: 'modules/mod-playerbots'
+
+      - name: ÏÂÔØ²¢Ìæ»»MotdMgr.cpp
+        run: |
+          curl -L -o MotdMgr.cpp https://raw.githubusercontent.com/aopkcn/acore-docker/master/MotdMgr.cpp
+          mkdir -p src/server/game/Motd
+          mv MotdMgr.cpp src/server/game/Motd/MotdMgr.cpp
+
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2.13
       - name: Configure OS
@@ -102,12 +109,13 @@ jobs:
             #Get-ChildItem "C:\Program Files\OpenSSL" -File -Recurse | ForEach-Object { $_.FullName }
             #Get-ChildItem "C:\tools\mysql\current" -File -Recurse | ForEach-Object { $_.FullName }
             mkdir -p dist
-            Move-Item -Path C:\Program Files\OpenSSL\bin\legacy.dll -Destination dist
-            Move-Item -Path C:\Program Files\OpenSSL\bin\libcrypto-1_1-x64.dll -Destination dist
-            Move-Item -Path C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll -Destination dist
-            Move-Item -Path C:\Program Files\OpenSSL\bin\libssl-1_1-x64.dll -Destination dist
-            Move-Item -Path C:\Program Files\OpenSSL\bin\libssl-3-x64.dll -Destination dist
-            Move-Item -Path C:\tools\mysql\current\lib\libmysql.dll -Destination dist
+            Copy-Item -Path src\server\game\Motd\MotdMgr.cpp -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\legacy.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libcrypto-1_1-x64.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libssl-1_1-x64.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libssl-3-x64.dll" -Destination dist
+               Copy-Item -Path C:\tools\mysql\current\lib\libmysql.dll -Destination dist
             Compress-Archive -Pathdist\* -DestinationPath AzerothCore-windows.zip
 
       #       Move-Item -Path C:\Program Files\OpenSSL\bin\legacy.dll -Destination var\build\obj\bin\RelWithDebInfo
