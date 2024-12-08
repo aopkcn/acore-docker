@@ -1,2 +1,2 @@
-Playerbot=
+Playerbot=889b509313f4f941d9d530a00d3f7d450adb7b1c
 Azerothcore=85d8c99b494a90823fe50974cf0cd297d3ae2e14
