@@ -1,4 +1,4 @@
-name: 艾泽拉斯+机器人构建Docker发布
+name: 艾泽拉斯核心+机器人Docker构建
 
 on:
   push:

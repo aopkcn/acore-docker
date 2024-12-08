@@ -1,4 +1,4 @@
-name: 艾泽拉斯+机器人构建windows发布
+name: 艾泽拉斯核心windows构建
 
 on:
   workflow_dispatch:
@@ -14,8 +14,8 @@ jobs:
         id: update_playerbot_commit_id
         run: |
           # 使用 GitHub API 获取最新提交的 SHA ID
-          CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/liyunfan1223/azerothcore-wotlk/commits/Playerbot?per_page=1 | jq -r '.sha')
-          CURRENT_COMMIT_ID=$(curl -s https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt | sed -n 's/^Playerbot=//p')
+          CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/azerothcore/azerothcore-wotlk/commits/Playerbot?per_page=1 | jq -r '.sha')
+          CURRENT_COMMIT_ID=$(curl -s https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt | sed -n 's/^Azerothcore=//p')
           echo "最新 Playerbot 提交 ID: $CORE_COMMIT_ID"
           echo "本地 Playerbot 提交 ID: $CURRENT_COMMIT_ID"
 
@@ -30,8 +30,8 @@ jobs:
             # 下载 Version.txt
             curl -s -L -o Version.txt https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt
 
-            # 替换 Playerbot 的值
-            sed -i "s/^Playerbot=.*/Playerbot=$CORE_COMMIT_ID/" Version.txt
+            # 替换 Azerothcore 的值
+            sed -i "s/^Azerothcore=.*/Azerothcore=$CORE_COMMIT_ID/" Version.txt
 
             # 转换为 Base64 编码
             FILE_CONTENT_BASE64=$(cat Version.txt | base64 -w 0)
@@ -73,8 +73,8 @@ jobs:
       - name: 拉取核心代码
         uses: actions/checkout@v4
         with:
-          repository: 'liyunfan1223/azerothcore-wotlk'
-          ref: 'Playerbot'
+          repository: 'azerothcore/azerothcore-wotlk'
+          ref: 'master'
 
       - name: 拉取当前项目
         uses: actions/checkout@v4
@@ -88,13 +88,6 @@ jobs:
           repository: 'azerothcore/mod-eluna'  
           ref: 'master'
           path: 'modules/mod-eluna'
-
-      - name: 拉取playerbots代码
-        uses: actions/checkout@v4
-        with:
-          repository: 'liyunfan1223/mod-playerbots'  
-          ref: 'master'
-          path: 'modules/mod-playerbots'
 
       - name: 下载并替换MotdMgr.cpp
         run: |

@@ -1,0 +1,146 @@
+name: 艾泽拉斯核心+机器人windows构建
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ubuntu:
+    name: 检查版本
+    runs-on: ubuntu-20.04
+    outputs:
+      skip_build: ${{ steps.get_commit_id.outputs.skip_build }}
+    steps:
+      - name: 获取指定项目的提交 ID
+        id: update_playerbot_commit_id
+        run: |
+          # 使用 GitHub API 获取最新提交的 SHA ID
+          CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/liyunfan1223/azerothcore-wotlk/commits/Playerbot?per_page=1 | jq -r '.sha')
+          CURRENT_COMMIT_ID=$(curl -s https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt | sed -n 's/^Playerbot=//p')
+          echo "最新 Playerbot 提交 ID: $CORE_COMMIT_ID"
+          echo "本地 Playerbot 提交 ID: $CURRENT_COMMIT_ID"
+
+          if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
+            echo "当前是最新的"
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+            exit 0  # 提交 ID 相同，停止工作流
+          else
+            echo "提交 ID 不相同，更新文件并推送"
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+
+            # 下载 Version.txt
+            curl -s -L -o Version.txt https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt
+
+            # 替换 Playerbot 的值
+            sed -i "s/^Playerbot=.*/Playerbot=$CORE_COMMIT_ID/" Version.txt
+
+            # 转换为 Base64 编码
+            FILE_CONTENT_BASE64=$(cat Version.txt | base64 -w 0)
+
+            # 文件路径和 API URL
+            FILE_NAME="Version.txt"
+            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/$FILE_NAME"
+
+            # 获取文件 SHA
+            FILE_SHA=$(curl -s -H "Authorization: token ${{ secrets.TOKEN }}" \
+                             -H "Accept: application/vnd.github.v3+json" \
+                             $API_URL | jq -r '.sha')
+
+            if [ "$FILE_SHA" != "null" ]; then
+              # 更新文件内容
+              curl -X PUT $API_URL \
+                -H "Authorization: token ${{ secrets.TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -d '{
+                  "message": "更新 Playerbot 提交 ID",
+                  "content": "'"$FILE_CONTENT_BASE64"'",
+                  "sha": "'"$FILE_SHA"'"
+                }'
+              echo "文件更新成功，推送更改"
+            else
+              echo "文件不存在或无法访问"
+              exit 1
+            fi
+          fi
+
+  publish:
+    name: 构建发布
+    needs: [build-ubuntu]
+    runs-on: windows-latest
+    # if: needs.build-ubuntu.outputs.skip_build != 'true'
+    env:
+      BOOST_ROOT: C:\local\boost_1_82_0
+    steps:
+      - name: 拉取核心代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'liyunfan1223/azerothcore-wotlk'
+          ref: 'Playerbot'
+
+      - name: 拉取当前项目
+        uses: actions/checkout@v4
+        with:
+          ref: 'master'
+          path: 'build'
+
+      - name: 拉取Eluna代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'azerothcore/mod-eluna'  
+          ref: 'master'
+          path: 'modules/mod-eluna'
+
+      - name: 拉取playerbots代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'liyunfan1223/mod-playerbots'  
+          ref: 'master'
+          path: 'modules/mod-playerbots'
+
+      - name: 下载并替换MotdMgr.cpp
+        run: |
+          curl -L -o MotdMgr.cpp https://raw.githubusercontent.com/aopkcn/acore-docker/master/MotdMgr.cpp
+          Move-Item -Path MotdMgr.cpp -Destination src/server/game/Motd/MotdMgr.cpp -Force
+
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2.13
+      - name: Configure OS
+        shell: bash
+        env:
+          CONTINUOUS_INTEGRATION: true
+        run: |
+          ./acore.sh install-deps
+      # - name: Build
+      #   shell: bash
+      #   run: |
+      #     export CTOOLS_BUILD=all
+      #     export CTYPE=RelWithDebInfo
+      #     ./acore.sh compiler build
+      - name: 打包构建文件
+        run: |
+            #Get-ChildItem "C:\Program Files\OpenSSL" -File -Recurse | ForEach-Object { $_.FullName }
+            #Get-ChildItem "C:\tools\mysql\current" -File -Recurse | ForEach-Object { $_.FullName }
+            mkdir -p dist
+            Copy-Item -Path src\server\game\Motd\MotdMgr.cpp -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\legacy.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libcrypto-1_1-x64.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libssl-1_1-x64.dll" -Destination dist
+               Copy-Item -Path "C:\Program Files\OpenSSL\bin\libssl-3-x64.dll" -Destination dist
+               Copy-Item -Path C:\tools\mysql\current\lib\libmysql.dll -Destination dist
+            Compress-Archive -Path dist\* -DestinationPath AzerothCore-windows.zip
+
+      #       Move-Item -Path C:\Program Files\OpenSSL\bin\legacy.dll -Destination var\build\obj\bin\RelWithDebInfo
+      #       Move-Item -Path C:\Program Files\OpenSSL\bin\libcrypto-1_1-x64.dll -Destination var\build\obj\bin\RelWithDebInfo
+      #       Move-Item -Path C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll -Destination var\build\obj\bin\RelWithDebInfo
+      #       Move-Item -Path C:\Program Files\OpenSSL\bin\libssl-1_1-x64.dll -Destination var\build\obj\bin\RelWithDebInfo
+      #       Move-Item -Path C:\Program Files\OpenSSL\bin\libssl-3-x64.dll -Destination var\build\obj\bin\RelWithDebInfo
+      #       Move-Item -Path C:\tools\mysql\current\lib\libmysql.dll -Destination var\build\obj\bin\RelWithDebInfo
+
+      #       Compress-Archive -Path var\build\obj\bin\RelWithDebInfo\* -DestinationPath AzerothCore-windows.zip
+      #       ls
+      - name: 上传 Windows 构建文件
+        uses: actions/upload-artifact@v4
+        with:
+         name: AzerothCore-windows
+         path: AzerothCore-windows.zip

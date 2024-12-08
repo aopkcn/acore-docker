@@ -1,0 +1,163 @@
+name: 艾泽拉斯核心Docker构建
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - 'Version.txt'
+
+jobs:
+  build-ubuntu:
+    name: 检查版本
+    runs-on: ubuntu-20.04
+    outputs:
+      skip_build: ${{ steps.get_commit_id.outputs.skip_build }}
+    steps:
+      - name: 获取指定项目的提交 ID
+        id: update_playerbot_commit_id
+        run: |
+          # 使用 GitHub API 获取最新提交的 SHA ID
+          CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/azerothcore/azerothcore-wotlk/commits/Playerbot?per_page=1 | jq -r '.sha')
+          CURRENT_COMMIT_ID=$(curl -s https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt | sed -n 's/^Azerothcore=//p')
+          echo "最新 Playerbot 提交 ID: $CORE_COMMIT_ID"
+          echo "本地 Playerbot 提交 ID: $CURRENT_COMMIT_ID"
+
+          if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
+            echo "当前是最新的"
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+            exit 0  # 提交 ID 相同，停止工作流
+          else
+            echo "提交 ID 不相同，更新文件并推送"
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+
+            # 下载 Version.txt
+            curl -s -L -o Version.txt https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt
+
+            # 替换 Azerothcore 的值
+            sed -i "s/^Azerothcore=.*/Azerothcore=$CORE_COMMIT_ID/" Version.txt
+
+            # 转换为 Base64 编码
+            FILE_CONTENT_BASE64=$(cat Version.txt | base64 -w 0)
+
+            # 文件路径和 API URL
+            FILE_NAME="Version.txt"
+            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/$FILE_NAME"
+
+            # 获取文件 SHA
+            FILE_SHA=$(curl -s -H "Authorization: token ${{ secrets.TOKEN }}" \
+                             -H "Accept: application/vnd.github.v3+json" \
+                             $API_URL | jq -r '.sha')
+
+            if [ "$FILE_SHA" != "null" ]; then
+              # 更新文件内容
+              curl -X PUT $API_URL \
+                -H "Authorization: token ${{ secrets.TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -d '{
+                  "message": "更新 Playerbot 提交 ID",
+                  "content": "'"$FILE_CONTENT_BASE64"'",
+                  "sha": "'"$FILE_SHA"'"
+                }'
+              echo "文件更新成功，推送更改"
+            else
+              echo "文件不存在或无法访问"
+              exit 1
+            fi
+          fi
+
+
+  publish:
+    name: 构建发布
+    needs: [build-ubuntu]
+    runs-on: ubuntu-20.04
+    if: needs.build-ubuntu.outputs.skip_build != 'true'
+    steps:
+      - name: 拉取核心代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'azerothcore/azerothcore-wotlk'
+          ref: 'master'
+
+      - name: 拉取当前项目
+        uses: actions/checkout@v4
+        with:
+          ref: 'master'
+          path: 'build'
+
+      - name: 拉取Eluna代码
+        uses: actions/checkout@v4
+        with:
+          repository: 'azerothcore/mod-eluna'  
+          ref: 'master'
+          path: 'modules/mod-eluna'
+
+      - name: 下载并替换MotdMgr.cpp
+        run: |
+          curl -L -o MotdMgr.cpp https://raw.githubusercontent.com/aopkcn/acore-docker/master/MotdMgr.cpp
+          mv -f MotdMgr.cpp src/server/game/Motd/MotdMgr.cpp
+
+      - name: 登录 Docker Hub 
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }} 
+          password: ${{ secrets.DOCKERHUB_TOKEN }} 
+
+      # - name: 登录 GitHub Container Registry
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.TOKEN }}
+
+
+      - name: 设置构建版本
+        id: version
+        run: |
+          version="ac"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: 设置 Docker Buildx 环境
+        uses: docker/setup-buildx-action@v3
+
+      - name: 构建 worldserver 
+        uses: ./build/.github/docker-build 
+        with:
+          component-name: worldserver 
+          version: ${{ steps.version.outputs.version }} 
+          push: true 
+
+      - name: 构建 authserver 
+        uses: ./build/.github/docker-build
+        with:
+          component-name: authserver
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: 构建 db-import 
+        uses: ./build/.github/docker-build
+        with:
+          component-name: db-import
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: 构建 client-data
+        uses: ./build/.github/docker-build
+        with:
+          component-name: client-data
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: 构建 tools
+        uses: ./build/.github/docker-build
+        with:
+          component-name: tools
+          version: ${{ steps.version.outputs.version }}
+          push: true
+
+      - name: 构建 dev-server
+        uses: ./build/.github/docker-build
+        with:
+          component-name: dev
+          version: ${{ steps.version.outputs.version }}
+          push: true
+          dockerfile: apps/docker/Dockerfile.dev-server
