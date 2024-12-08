@@ -91,18 +91,22 @@ jobs:
           CONTINUOUS_INTEGRATION: true
         run: |
           ./acore.sh install-deps
-      - name: Build
-        shell: bash
-        run: |
-          export CTOOLS_BUILD=all
-          export CTYPE=RelWithDebInfo
-          ./acore.sh compiler build
+      # - name: Build
+      #   shell: bash
+      #   run: |
+      #     export CTOOLS_BUILD=all
+      #     export CTYPE=RelWithDebInfo
+      #     ./acore.sh compiler build
       - name: 打包构建文件
         run: |
-            Compress-Archive -Path var\build\obj\bin\RelWithDebInfo\* -DestinationPath AzerothCore-windows.zip
-            ls
-      - name: 上传 Windows 构建文件
-        uses: actions/upload-artifact@v4
-        with:
-         name: AzerothCore-windows
-         path: AzerothCore-windows.zip
+            Get-ChildItem "C:\Program Files\OpenSSL" -File -Recurse | ForEach-Object { $_.FullName }
+            Get-ChildItem "C:\tools\mysql\current" -File -Recurse | ForEach-Object { $_.FullName }
+      #       Move-Item -Path C:\Program Files\OpenSSL\bin\libssl-1_1-x64.dll -Destination var\build\obj\bin\RelWithDebInfo
+      #       Move-Item -Path C:\Program Files\OpenSSL\bin\libcrypto-1_1-x64.dll -Destination var\build\obj\bin\RelWithDebInfo
+      #       Compress-Archive -Path var\build\obj\bin\RelWithDebInfo\* -DestinationPath AzerothCore-windows.zip
+      #       ls
+      # - name: 上传 Windows 构建文件
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #    name: AzerothCore-windows
+      #    path: AzerothCore-windows.zip
