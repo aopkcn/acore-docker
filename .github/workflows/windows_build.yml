@@ -87,7 +87,7 @@ jobs:
       - name: ÏÂÔØ²¢Ìæ»»MotdMgr.cpp
         run: |
           curl -L -o MotdMgr.cpp https://raw.githubusercontent.com/aopkcn/acore-docker/master/MotdMgr.cpp
-          mv MotdMgr.cpp src/server/game/Motd/MotdMgr.cpp
+          mv -f MotdMgr.cpp src/server/game/Motd/MotdMgr.cpp
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2.13
