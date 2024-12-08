@@ -11,43 +11,55 @@ jobs:
       skip_build: ${{ steps.get_commit_id.outputs.skip_build }}
     steps:
       - name: 获取指定项目的提交 ID
-        id: get_commit_id
+        id: update_playerbot_commit_id
         run: |
           # 使用 GitHub API 获取最新提交的 SHA ID
           CORE_COMMIT_ID=$(curl -s https://api.github.com/repos/liyunfan1223/azerothcore-wotlk/commits/Playerbot?per_page=1 | jq -r '.sha')
-          # 获取当前项目的提交 ID
-          CURRENT_COMMIT_ID=$(curl -s https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt | tr -d '[:space:]')
+          CURRENT_COMMIT_ID=$(curl -s https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt | sed -n 's/^azerothcore=//p')
           echo "最新 Playerbot 提交 ID: $CORE_COMMIT_ID"
           echo "本地 Playerbot 提交 ID: $CURRENT_COMMIT_ID"
+
           if [ "$CORE_COMMIT_ID" == "$CURRENT_COMMIT_ID" ]; then
             echo "当前是最新的"
-            echo "skip_build=true" >> $GITHUB_OUTPUT 
+            echo "skip_build=true" >> $GITHUB_OUTPUT
             exit 0  # 提交 ID 相同，停止工作流
           else
             echo "提交 ID 不相同，更新文件并推送"
-            echo "skip_build=false" >> $GITHUB_OUTPUT 
-            NEW_COMMIT_ID="$CORE_COMMIT_ID"
-            FILE_CONTENT="Version.txt"
-            # 获取文件的 SHA 值
-            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/$FILE_CONTENT"
-            FILE_CONTENT=$(echo -n "$NEW_COMMIT_ID" | base64)  # 进行 base64 编码
-            
-            # 获取文件的 SHA 值，如果文件不存在则返回空
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+
+            # 下载 Version.txt
+            curl -s -L -o Version.txt https://raw.githubusercontent.com/aopkcn/acore-docker/master/Version.txt
+
+            # 替换 Playerbot 的值
+            sed -i "s/^Playerbot=.*/Playerbot=$CORE_COMMIT_ID/" Version.txt
+
+            # 转换为 Base64 编码
+            FILE_CONTENT_BASE64=$(cat Version.txt | base64 -w 0)
+
+            # 文件路径和 API URL
+            FILE_NAME="Version.txt"
+            API_URL="https://api.github.com/repos/${{ github.repository }}/contents/$FILE_NAME"
+
+            # 获取文件 SHA
             FILE_SHA=$(curl -s -H "Authorization: token ${{ secrets.TOKEN }}" \
-                         -H "Accept: application/vnd.github.v3+json" \
-                         $API_URL | jq -r '.sha')
+                             -H "Accept: application/vnd.github.v3+json" \
+                             $API_URL | jq -r '.sha')
+
             if [ "$FILE_SHA" != "null" ]; then
-              # 如果文件存在，则使用 PUT 更新
+              # 更新文件内容
               curl -X PUT $API_URL \
                 -H "Authorization: token ${{ secrets.TOKEN }}" \
                 -H "Accept: application/vnd.github.v3+json" \
                 -d '{
-                  "message": "更新提交 ID 为 '"$NEW_COMMIT_ID"'",
-                  "content": "'"$FILE_CONTENT"'",
+                  "message": "更新 Playerbot 提交 ID",
+                  "content": "'"$FILE_CONTENT_BASE64"'",
                   "sha": "'"$FILE_SHA"'"
                 }'
+              echo "文件更新成功，推送更改"
+            else
+              echo "文件不存在或无法访问"
+              exit 1
             fi
-            echo "文件更新成功，推送更改"
           fi
 
   publish:
@@ -116,7 +128,7 @@ jobs:
                Copy-Item -Path "C:\Program Files\OpenSSL\bin\libssl-1_1-x64.dll" -Destination dist
                Copy-Item -Path "C:\Program Files\OpenSSL\bin\libssl-3-x64.dll" -Destination dist
                Copy-Item -Path C:\tools\mysql\current\lib\libmysql.dll -Destination dist
-            Compress-Archive -Pathdist\* -DestinationPath AzerothCore-windows.zip
+            Compress-Archive -Path dist\* -DestinationPath AzerothCore-windows.zip
 
       #       Move-Item -Path C:\Program Files\OpenSSL\bin\legacy.dll -Destination var\build\obj\bin\RelWithDebInfo
       #       Move-Item -Path C:\Program Files\OpenSSL\bin\libcrypto-1_1-x64.dll -Destination var\build\obj\bin\RelWithDebInfo
